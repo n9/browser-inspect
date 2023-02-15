@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html><head>
+    <title>Browser Inspect</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        :root { --color: #000; --background: #FFF; }
+        html { color: var(--color); background-color: var(--background); }
+        dl { display: grid; grid-template-columns: fit-content(25%) 1fr; column-gap: 0.5rem; row-gap: 0.5rem; }
+        dt { text-align: right; }
+        dt::after { content: ": " }
+        dd { font-weight: bold; align-self: end; margin: 0; }
+        #canvas { position: absolute; top: 0; z-index: -1; }
+    </style>
+</head><body>
+    <div id="data"></div>
+
+    <button id="save">Save report</button>
+    <button id="share">Share report</button>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+    //<![CDATA[
+        const dataElement = document.getElementById("data")
+        const saveButton = document.getElementById("save")
+        const shareButton = document.getElementById("share")
+        const canvasContext = document.getElementById("canvas").getContext('2d')
+
+        const properties = {
+            "user agent": () => navigator.userAgent,
+            "languages": () => `${navigator.language} / ${navigator.languages}`,
+            "screen size": () => `${screen.width} × ${screen.height}`,
+            "screen avail size": () => `${screen.availWidth} × ${screen.availHeight}`,
+            "window outer size": () => `${window.outerWidth} × ${window.outerHeight}`,
+            "window inner size": () => `${window.innerWidth} × ${window.innerHeight}`,
+            "viewport size": () => `${visualViewport.width} × ${visualViewport.height}`,
+            "document client size": () => `${document.documentElement.clientWidth} × ${document.documentElement.clientHeight}`,
+
+            "device pixel ratio": () => window.devicePixelRatio, 
+            "viewport scale": () => visualViewport.scale,
+            "zoom": () => getComputedStyle(document.documentElement).zoom,
+            "font size": () => getComputedStyle(document.documentElement).fontSize,
+            
+            "text metrics": () => getTextMetrics(),
+            "color / pixel depth": () => `${screen.colorDepth} / ${screen.pixelDepth}`,
+            
+            "toolbar visible": () => toolbar.visible,
+            "locationbar visible": () => locationbar.visible,
+            "menubar visible": () => menubar.visible,
+
+            "supports fullscreen": () => document.fullscreenEnabled,
+            "supports virtual keyboard": () => "virtualKeyboard" in navigator,
+
+            "features": () => document.featurePolicy?.features().join(', '),
+        }
+
+        render()
+
+        window.onresize = render
+        if ("visualViewport" in window)
+            window.visualViewport.onresize = render
+        
+        saveButton.onclick = save
+
+        if ("canShare" in navigator)
+            shareButton.onclick = share
+        else
+            shareButton.remove()
+
+        function share() {
+            if (!navigator.share({
+                title: buildReportTitle(),
+                text: buildReport()
+            })) {
+                alert("Share failed. Try save instead.");
+            }            
+        }
+
+        function save() {
+            const link = document.createElement("a")
+            link.href = URL.createObjectURL(new Blob([buildReport()], {
+                type: "text/plain"
+            }))
+            link.download = buildReportTitle()
+            link.click()
+        }
+
+        function buildReportTitle() {
+            return "Browser Inspect"
+        }
+
+        function buildReport() {
+            return JSON.stringify(Object.fromEntries(Object.entries(properties).map(([key, value]) => {
+                let stringValue;
+                try {
+                    stringValue = value()?.toString()
+                } catch (e) {
+                    stringValue = `ERR: ${e}`
+                }
+                return [key, stringValue]
+            })))
+        }
+
+        function render() {
+            const container = document.createElement("dl")
+
+            Object.entries(properties).forEach(([key, value]) => {
+                const keyElement = document.createElement("dt")
+                const valueElement = document.createElement("dd")
+
+                keyElement.textContent = key
+
+                try {
+                    valueElement.textContent = value()?.toString()
+                } catch (e) {
+                    valueElement.textContent = `ERR: ${e}`
+                }
+
+                container.appendChild(keyElement)
+                container.appendChild(valueElement)
+            })
+
+            dataElement.innerHTML = ""   
+            dataElement.appendChild(container) 
+        }
+
+        function getTextMetrics() {
+            const m = canvasContext.measureText("Áy");
+            return `${m.fontBoundingBoxAscent}, ${m.fontBoundingBoxDescent} [${m.actualBoundingBoxAscent}, ${m.actualBoundingBoxDescent}]`
+        }
+    //]]>
+    </script>
+</body></html>
