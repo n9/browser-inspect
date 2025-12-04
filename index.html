@@ -10,8 +10,11 @@
         dt::after { content: ": " }
         dd { font-weight: bold; align-self: end; margin: 0; }
         #canvas { position: absolute; top: 0; z-index: -1; }
+        input { box-sizing: border-box; width: 100%; }
     </style>
 </head><body>
+    <input type="text" placeholder="test input" />
+
     <div id="data"></div>
 
     <button id="save">Save report</button>
